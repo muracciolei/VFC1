@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "VFC 1 — Una Fuga Italiana",
+  "short_name": "VFC 1",
+  "description": "Sandbox open world originale ambientato in una Mini Italia compressa: ruba auto, semina la Polizia e vivi la dolce vita.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "categories": ["games", "action"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

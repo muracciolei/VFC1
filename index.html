@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="VFC 1 - an original open-world crime sandbox set in a compressed Italy. Steal cars, outrun the Polizia and live the dolce vita." />
+    <title>VFC 1 — Una Fuga Italiana</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./src/ui/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- Boot / loading -->
+      <section id="boot" class="screen boot">
+        <div class="boot__noise"></div>
+        <div class="boot__brand">
+          <div class="brand__eyebrow">UNA FUGA ITALIANA</div>
+          <h1 class="brand__title">VFC 1</h1>
+          <div class="brand__line"></div>
+          <div id="boot-status" class="boot__status">Preparing the peninsula…</div>
+          <div class="boot__bar"><div id="boot-fill" class="boot__fill"></div></div>
+        </div>
+        <div class="boot__foot">MINI ITALIA · 1:180 · SEED 1969</div>
+      </section>
+
+      <!-- Main menu -->
+      <section id="menu" class="screen menu hidden">
+        <div class="menu__sky"></div>
+        <div class="menu__vignette"></div>
+        <div class="menu__top">
+          <div class="menu__logo">
+            <span class="menu__kicker">UNA FUGA ITALIANA</span>
+            <h1>VFC 1</h1>
+            <span class="menu__sub">MINI ITALIA · OPEN WORLD CRIME</span>
+          </div>
+          <div id="menu-profile" class="menu__profile"></div>
+        </div>
+        <div class="menu__actions">
+          <button id="btn-continue" class="mbtn mbtn--primary">CONTINUA<span id="continue-meta"></span></button>
+          <button id="btn-new" class="mbtn">NUOVA PARTITA</button>
+          <button id="btn-settings" class="mbtn">IMPOSTAZIONI</button>
+          <button id="btn-controls" class="mbtn">COMANDI</button>
+        </div>
+        <div class="menu__bottom">
+          <span>© 2026 STUDIO VFC 1 — ORIGINAL WORK</span>
+          <span id="menu-hint">Touch, keyboard or gamepad</span>
+        </div>
+      </section>
+
+      <!-- In-game HUD -->
+      <section id="hud" class="hud hidden">
+        <div class="hud__top-left">
+          <div class="cash"><span class="cash__symbol">€</span><span id="hud-cash">0</span></div>
+          <div class="vitals" aria-label="Salute, armatura e resistenza">
+            <div class="vitals__track"><div id="hud-health" class="vitals__fill"></div></div>
+            <div class="vitals__track vitals__track--armor"><div id="hud-armor" class="vitals__fill"></div></div>
+            <div class="vitals__track vitals__track--stamina"><div id="hud-stamina" class="vitals__fill"></div></div>
+          </div>
+          <div id="hud-wanted" class="wanted" aria-label="Wanted level"></div>
+          <div id="hud-region" class="region">MILANO</div>
+        </div>
+
+        <div class="hud__top-right">
+          <div class="clock">
+            <span id="hud-time">08:00</span>
+            <span id="hud-weather" class="clock__weather">SERENO</span>
+          </div>
+          <canvas id="minimap" width="220" height="220" aria-label="Minimap"></canvas>
+          <button id="btn-map" class="round-btn" aria-label="Open map">MAP</button>
+        </div>
+
+        <div id="mission-panel" class="mission-panel hidden">
+          <div class="mission-panel__tag">MISSIONE</div>
+          <div id="mission-title" class="mission-panel__title"></div>
+          <div id="mission-objective" class="mission-panel__obj"></div>
+          <div id="mission-timer" class="mission-panel__timer hidden"></div>
+        </div>
+
+        <div id="interact-prompt" class="prompt hidden">
+          <span id="prompt-key" class="prompt__key">E</span>
+          <span id="prompt-text" class="prompt__text"></span>
+        </div>
+
+        <div id="notifications" class="notifications"></div>
+        <div id="subtitle" class="subtitle hidden"></div>
+
+        <div id="hud-help" class="hud-help"></div>
+
+        <!-- Touch controls -->
+        <div id="touch-ui" class="touch-ui">
+          <div id="joystick-zone" class="joystick-zone">
+            <div id="joystick-base" class="joystick-base"><div id="joystick-knob" class="joystick-knob"></div></div>
+          </div>
+
+          <div id="action-cluster" class="action-cluster">
+            <button id="btn-action" class="tbtn tbtn--action">ENTRA</button>
+            <button id="btn-jump" class="tbtn tbtn--small">SALTA</button>
+            <button id="btn-sprint" class="tbtn tbtn--small">CORRI</button>
+            <button id="btn-attack" class="tbtn tbtn--small hidden">SPARA</button>
+            <button id="btn-aim" class="tbtn tbtn--small" aria-label="Mira">MIRA</button>
+            <button id="btn-reload" class="tbtn tbtn--small" aria-label="Ricarica">RICA</button>
+          </div>
+
+          <div id="drive-cluster" class="drive-cluster hidden">
+            <button id="btn-gas" class="pedal pedal--gas">▲</button>
+            <button id="btn-brake" class="pedal pedal--brake">▼</button>
+            <button id="btn-handbrake" class="tbtn tbtn--small pedal--hand">DRIFT</button>
+            <button id="btn-horn" class="tbtn tbtn--small" aria-label="Clacson">CLACSON</button>
+            <button id="btn-reset" class="tbtn tbtn--small" aria-label="Raddrizza veicolo">RESET</button>
+          </div>
+
+          <button id="btn-pause" class="icon-btn">II</button>
+          <button id="btn-weapon" class="icon-btn icon-btn--weapon hidden">9mm</button>
+          <button id="btn-camera" class="icon-btn icon-btn--cam">CAM</button>
+        </div>
+
+        <div id="speedo" class="speedo hidden">
+          <div class="speedo__bar"><div id="speedo-fill"></div></div>
+          <div class="speedo__label"><span id="speedo-name">PANDA</span><span id="speedo-kmh">0 KM/H</span></div>
+        </div>
+
+        <div id="aim-reticle" class="aim-reticle hidden"></div>
+        <div id="hit-marker" class="hit-marker"></div>
+      </section>
+
+      <!-- Pause -->
+      <section id="pause" class="screen overlay hidden">
+        <div class="panel pause__panel">
+          <h2>PAUSA</h2>
+          <div id="pause-location" class="pause__loc"></div>
+          <div class="panel__grid">
+            <button id="btn-resume" class="mbtn mbtn--primary">RIPRENDI</button>
+            <button id="btn-pause-map" class="mbtn">MAPPA</button>
+            <button id="btn-pause-missions" class="mbtn">MISSIONI</button>
+            <button id="btn-pause-garage" class="mbtn">GARAGE</button>
+            <button id="btn-pause-settings" class="mbtn">IMPOSTAZIONI</button>
+            <button id="btn-pause-save" class="mbtn">SALVA</button>
+            <button id="btn-pause-menu" class="mbtn mbtn--danger">MENU PRINCIPALE</button>
+          </div>
+          <div id="pause-stats" class="pause__stats"></div>
+        </div>
+      </section>
+
+      <!-- Mission failed / retry -->
+      <section id="mission-fail" class="screen overlay hidden">
+        <div class="panel mission-fail__panel">
+          <div class="mission-fail__tag">MISSIONE FALLITA</div>
+          <h2 id="mission-fail-title">OBIETTIVO MANCATO</h2>
+          <p id="mission-fail-reason" class="mission-fail__reason"></p>
+          <div class="panel__grid">
+            <button id="btn-mission-retry" class="mbtn mbtn--primary">RIPROVA DAL CHECKPOINT</button>
+            <button id="btn-mission-abandon" class="mbtn">ABBANDONA MISSIONE</button>
+          </div>
+          <div class="panel__note">Riparti dall'ultimo obiettivo raggiunto senza rifare tutta la missione.</div>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section id="map-screen" class="screen overlay map-screen hidden">
+        <div class="map-screen__head">
+          <div>
+            <h2>MINI ITALIA</h2>
+            <div class="map-screen__sub">SELEZIONA UNA DESTINAZIONE</div>
+          </div>
+          <button id="btn-map-close" class="icon-btn icon-btn--big">✕</button>
+        </div>
+        <div class="map-screen__wrap">
+          <canvas id="bigmap" width="900" height="1100"></canvas>
+          <div id="map-legend" class="map-legend"></div>
+        </div>
+        <div class="map-screen__foot">
+          <div id="map-info">Tocca un'icona per impostare il navigatore.</div>
+          <button id="btn-map-waypoint" class="mbtn mbtn--small mbtn--primary">SEGUI ROTTA</button>
+        </div>
+      </section>
+
+      <!-- Missions -->
+      <section id="missions" class="screen overlay hidden">
+        <div class="panel wide">
+          <div class="panel__head">
+            <h2>MISSIONI</h2>
+            <button id="btn-missions-close" class="icon-btn icon-btn--big">✕</button>
+          </div>
+          <div id="mission-list" class="mission-list"></div>
+        </div>
+      </section>
+
+      <!-- Garage / shops -->
+      <section id="garage" class="screen overlay hidden">
+        <div class="panel wide">
+          <div class="panel__head">
+            <h2>GARAGE</h2>
+            <button id="btn-garage-close" class="icon-btn icon-btn--big">✕</button>
+          </div>
+          <div id="garage-cash" class="garage__cash"></div>
+          <div id="garage-list" class="garage-list"></div>
+          <div class="panel__note">I veicoli acquistati compaiono qui e nelle rimesse.</div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section id="settings" class="screen overlay hidden">
+        <div class="panel wide">
+          <div class="panel__head">
+            <h2>IMPOSTAZIONI</h2>
+            <button id="btn-settings-close" class="icon-btn icon-btn--big">✕</button>
+          </div>
+          <div id="settings-body" class="settings"></div>
+          <div class="settings__foot">
+            <button id="btn-reset-save" class="mbtn mbtn--danger mbtn--small">CANCELLA PROGRESSI</button>
+            <button id="btn-settings-apply" class="mbtn mbtn--primary mbtn--small">APPLICA</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Controls help -->
+      <section id="controls" class="screen overlay hidden">
+        <div class="panel wide">
+          <div class="panel__head">
+            <h2>COMANDI</h2>
+            <button id="btn-controls-close" class="icon-btn icon-btn--big">✕</button>
+          </div>
+          <div id="controls-body" class="controls-body"></div>
+        </div>
+      </section>
+
+      <!-- Death -->
+      <section id="wasted" class="screen wasted hidden">
+        <div class="wasted__text">FUORI GIOCO</div>
+        <div class="wasted__sub">La polizia ti ha fermato.</div>
+        <button id="btn-respawn" class="mbtn mbtn--primary">TORNA IN STRADA</button>
+        <div id="wasted-cost" class="wasted__cost"></div>
+      </section>
+
+      <!-- Dialogue -->
+      <section id="dialogue" class="dialogue hidden">
+        <div class="dialogue__box">
+          <div id="dialogue-name" class="dialogue__name"></div>
+          <div id="dialogue-text" class="dialogue__text"></div>
+          <button id="btn-dialogue" class="dialogue__next">AVANTI</button>
+        </div>
+      </section>
+
+      <div id="rotate-hint" class="rotate-hint hidden">
+        <div class="rotate-hint__phone"></div>
+        <div>RUOTA IL TELEFONO<br /><span>tocca per continuare · meglio in orizzontale</span></div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
