@@ -78,7 +78,7 @@ export class VehicleSystem {
       const t = 0.15 + Math.random() * 0.7;
       const p = this.pointOnLink(link, t * seg.length);
       if (!p) continue;
-      const right = { x: p.dx, z: -p.dz };
+      const right = { x: -p.dz, z: p.dx };
       const off = seg.width * 0.4;
       const px = p.x + right.x * off;
       const pz = p.z + right.z * off;
@@ -110,7 +110,7 @@ export class VehicleSystem {
       if (this.world.isWater(p.x, p.z)) continue;
       const type = TRAFFIC_TYPES[Math.floor(Math.random() * TRAFFIC_TYPES.length)];
       const v = createVehicle(type);
-      const right = { x: p.dx, z: -p.dz };
+      const right = { x: -p.dz, z: p.dx };
       const off = seg.width * 0.23;
       v.place(p.x + right.x * off, p.z + right.z * off, Math.atan2(p.dx, p.dz), this.world);
       v.driver = 'npc';
@@ -295,8 +295,9 @@ export class VehicleSystem {
       if (!p) continue;
       const curSeg = roads.segments[curLink.seg];
       const lane = Math.min(v.ai.lane, curSeg.width * 0.3);
-      const rightX = p.dz;
-      const rightZ = -p.dx;
+      // Right of the link direction: forward x up = (-dz, dx).
+      const rightX = -p.dz;
+      const rightZ = p.dx;
       const tx = p.x + rightX * lane;
       const tz = p.z + rightZ * lane;
       const ty = p.y + 0.14;
