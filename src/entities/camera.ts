@@ -97,8 +97,9 @@ export class ThirdPersonCamera {
 
     // shoulder offset while aiming
     if (opts.aiming && !opts.inVehicle) {
-      const rx = Math.cos(this.yaw);
-      const rz = -Math.sin(this.yaw);
+      // Aim over the right shoulder: forward x up = (-cos, sin) in XZ.
+      const rx = -Math.cos(this.yaw);
+      const rz = Math.sin(this.yaw);
       this.pivot.x += rx * 0.62;
       this.pivot.z += rz * 0.62;
     }
