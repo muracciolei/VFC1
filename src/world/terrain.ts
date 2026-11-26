@@ -30,8 +30,14 @@ import {
 } from './config';
 
 export interface RoadHeightProvider {
-  /** Returns road elevation and influence (0..1) at a world position, or null. */
-  sampleRoadHeight(x: number, z: number): { height: number; weight: number; width: number } | null;
+  /**
+   * Returns road elevation and influence (0..1) at a world position, plus the
+   * distance to the closest centreline (used to tell asphalt from shoulder).
+   */
+  sampleRoadHeight(
+    x: number,
+    z: number,
+  ): { height: number; weight: number; width: number; dist: number } | null;
 }
 
 export interface TerrainSample {
@@ -41,6 +47,9 @@ export interface TerrainSample {
   city: CityDef | null;
   cityWeight: number;
 }
+
+/** How far below the road surface the flattened terrain bed is kept. */
+const ROAD_BED_DEPTH = 0.38;
 
 const MAINLAND_BOUNDS = { minX: -1800, maxX: 1900, minZ: -3250, maxZ: 1650 };
 const SICILY_BOUNDS = { minX: -700, maxX: 650, minZ: 2000, maxZ: 3000 };
@@ -209,6 +218,11 @@ export class Terrain {
       if (road && road.weight > 0) {
         const w = clamp01(road.weight);
         h = lerp(h, road.height, w * 0.94);
+        // Never let the ground rise into the asphalt slab: the terrain mesh is
+        // coarse (15 m cells) and interpolates above the sampled heights, so
+        // keep the whole roadbed safely under the road surface.
+        const bed = road.height - ROAD_BED_DEPTH;
+        if (h > bed) h = lerp(h, bed, w);
       }
     }
     return h;

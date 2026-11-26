@@ -89,6 +89,10 @@ export interface CityBlock {
 }
 
 const CELL = 64;
+/** Extra metres beyond the asphalt edge that sit at full road height. */
+const ROAD_PLATEAU = 8;
+/** Metres beyond the asphalt edge where the road influence fades to zero. */
+const ROAD_SHOULDER = 22;
 
 export class RoadNetwork {
   nodes: RoadNode[] = [];
@@ -610,7 +614,10 @@ export class RoadNetwork {
   /* Queries                                                         */
   /* -------------------------------------------------------------- */
 
-  sampleRoadHeight(x: number, z: number): { height: number; weight: number; width: number } | null {
+  sampleRoadHeight(
+    x: number,
+    z: number,
+  ): { height: number; weight: number; width: number; dist: number } | null {
     const cx = Math.floor(x / CELL);
     const cz = Math.floor(z / CELL);
     let best: { height: number; weight: number; width: number; dist: number } | null = null;
@@ -621,14 +628,17 @@ export class RoadNetwork {
         if (!arr) continue;
         for (const id of arr) {
           const seg = this.segments[id];
-          const pad = seg.width * 0.5 + 6;
+          const pad = seg.width * 0.5 + ROAD_SHOULDER;
           if (x < this.segMinX(seg) - pad || x > this.segMaxX(seg) + pad) continue;
           if (z < this.segMinZ(seg) - pad || z > this.segMaxZ(seg) + pad) continue;
           const hit = this.closestOnSegment(seg, x, z);
           if (!hit) continue;
           const half = seg.width * 0.5;
-          if (hit.dist > half + 5) continue;
-          const weight = 1 - clamp01((hit.dist - half * 0.55) / (half * 0.45 + 5));
+          // Full flattening covers the asphalt plus a shoulder, then eases out.
+          // The wide plateau keeps whole terrain mesh cells (15 m) below the
+          // road surface, which is what stops the grass from covering it.
+          if (hit.dist > half + ROAD_SHOULDER) continue;
+          const weight = 1 - clamp01((hit.dist - (half + ROAD_PLATEAU)) / (ROAD_SHOULDER - ROAD_PLATEAU));
           if (!best || hit.dist < best.dist) {
             best = { height: hit.y, weight, width: seg.width, dist: hit.dist };
           }
@@ -636,7 +646,7 @@ export class RoadNetwork {
       }
     }
     if (!best) return null;
-    return { height: best.height, weight: clamp01(best.weight * 1.15), width: best.width };
+    return { height: best.height, weight: clamp01(best.weight), width: best.width, dist: best.dist };
   }
 
   private segMinX(seg: RoadSegment): number {

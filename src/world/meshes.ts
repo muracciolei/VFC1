@@ -12,6 +12,11 @@ export interface TerrainMeshOptions {
   highDetail: boolean;
 }
 
+/** Height of the asphalt slab above the road centreline elevation. */
+export const ROAD_LIFT = 0.2;
+/** Paint sits a hair above the asphalt so it never z-fights. */
+const MARK_LIFT = 0.015;
+
 const GRASS_DARK = new THREE.Color('#4d5f34');
 const GRASS_LIGHT = new THREE.Color('#7c8a4d');
 const GRASS_DRY = new THREE.Color('#96905c');
@@ -182,8 +187,8 @@ function roadQuad(
   const rx = (-dz / len) * width * 0.5;
   const rz = (dx / len) * width * 0.5;
   const vEnd = vStart + len / 8;
-  const y0 = a.y + 0.12 + lift;
-  const y1 = b.y + 0.12 + lift;
+  const y0 = a.y + ROAD_LIFT + lift;
+  const y1 = b.y + ROAD_LIFT + lift;
   builder.addQuad(
     { x: a.x - rx, y: y0, z: a.z - rz },
     { x: b.x - rx, y: y1, z: b.z - rz },
@@ -269,7 +274,7 @@ export function buildRoadMeshes(roads: RoadNetwork, mats: MaterialLibrary): Road
     for (const id of [seg.a, seg.b]) {
       const n = roads.nodes[id];
       const w = seg.width + 1.2;
-      surface.addPlane(n.x, n.y + 0.123, n.z, w, w, 0, asphaltColor, 6);
+      surface.addPlane(n.x, n.y + ROAD_LIFT + 0.003, n.z, w, w, 0, asphaltColor, 6);
     }
 
     // markings
@@ -288,7 +293,7 @@ export function buildRoadMeshes(roads: RoadNetwork, mats: MaterialLibrary): Road
           const az = lerp(a.z, b.z, t0);
           const bx = lerp(a.x, b.x, t1);
           const bz = lerp(a.z, b.z, t1);
-          const y = lerp(seg.ys[i] ?? 0, seg.ys[i + 1] ?? 0, t0) + 0.135;
+          const y = lerp(seg.ys[i] ?? 0, seg.ys[i + 1] ?? 0, t0) + ROAD_LIFT + MARK_LIFT;
           for (const off of [-laneW * 0.5, laneW * 0.5]) {
             const o = laneOffset(ax, az, bx, bz, off);
             addDash(marks, ax + o.ox, az + o.oz, bx + o.ox, bz + o.oz, y, white);
@@ -298,8 +303,8 @@ export function buildRoadMeshes(roads: RoadNetwork, mats: MaterialLibrary): Road
         for (const off of [-seg.width * 0.5 + 0.55, seg.width * 0.5 - 0.55]) {
           const o0 = laneOffset(a.x, a.z, b.x, b.z, off);
           const o1 = laneOffset(a.x, a.z, b.x, b.z, off);
-          const y0 = (seg.ys[i] ?? 0) + 0.135;
-          const y1 = (seg.ys[i + 1] ?? 0) + 0.135;
+          const y0 = (seg.ys[i] ?? 0) + ROAD_LIFT + MARK_LIFT;
+          const y1 = (seg.ys[i + 1] ?? 0) + ROAD_LIFT + MARK_LIFT;
           marks.addQuad(
             { x: a.x + o0.ox - 0.06, y: y0, z: a.z + o0.oz },
             { x: b.x + o1.ox - 0.06, y: y1, z: b.z + o1.oz },
@@ -330,7 +335,7 @@ export function buildRoadMeshes(roads: RoadNetwork, mats: MaterialLibrary): Road
           const az = lerp(a.z, b.z, t0);
           const bx = lerp(a.x, b.x, t1);
           const bz = lerp(a.z, b.z, t1);
-          const y = lerp(seg.ys[i] ?? 0, seg.ys[i + 1] ?? 0, t0) + 0.135;
+          const y = lerp(seg.ys[i] ?? 0, seg.ys[i + 1] ?? 0, t0) + ROAD_LIFT + MARK_LIFT;
           addDash(marks, ax, az, bx, bz, y, white);
         }
       }
