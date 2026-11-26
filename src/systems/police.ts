@@ -263,7 +263,8 @@ export class PoliceSystem {
       const controls: DriveControls = {
         throttle: dist > 24 ? 1 : dist > 13 ? 0.55 : 0.1,
         brake: dist < 11 ? 0.8 : 0,
-        steer: clamp(delta * 1.5, -1, 1),
+        // Positive steer is right, so a target to the left (positive delta) needs a negative steer.
+        steer: clamp(-delta * 1.5, -1, 1),
         handbrake: false,
       };
       v.update(dt, controls, this.world);

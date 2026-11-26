@@ -252,8 +252,9 @@ export class Player {
 
     const fwdX = Math.sin(camYaw);
     const fwdZ = Math.cos(camYaw);
-    const rightX = Math.cos(camYaw);
-    const rightZ = -Math.sin(camYaw);
+    // Right of the camera view: forward × up. With +Z forward, that is -X.
+    const rightX = -Math.cos(camYaw);
+    const rightZ = Math.sin(camYaw);
     let dx = fwdX * my + rightX * mx;
     let dz = fwdZ * my + rightZ * mx;
     const dl = Math.hypot(dx, dz);

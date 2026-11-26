@@ -472,7 +472,8 @@ export class Vehicle {
     // steering
     const speedFactor = clamp01(Math.abs(fwdSpeed) / 6);
     const highSpeedDamp = lerp(1, 0.52, clamp01(Math.abs(fwdSpeed) / def.maxSpeed));
-    const steerDir = fwdSpeed >= -0.2 ? 1 : -1;
+    // Positive steer points the car right, and yaw grows counter-clockwise.
+    const steerDir = fwdSpeed >= -0.2 ? -1 : 1;
     const yawDelta =
       controls.steer * def.steerRate * speedFactor * highSpeedDamp * steerDir * dt;
     this.yaw += yawDelta;
@@ -558,7 +559,7 @@ export class Vehicle {
     this.handbraking = controls.handbrake;
     this.syncTransform();
     const forwardSpeed = this.velX * nfX + this.velZ * nfZ;
-    this.updateWheelVisuals(dt, forwardSpeed, controls.steer);
+    this.updateWheelVisuals(dt, forwardSpeed, -controls.steer);
 
     // speed-based damage smoke
     if (this.health < this.maxHealth * 0.35 && prevSpeed > 2) {
