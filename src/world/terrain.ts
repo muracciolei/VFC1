@@ -11,7 +11,6 @@ import {
   dist2D,
   fbm2,
   lerp,
-  noise2,
   pointSegmentDistanceSq,
   polygonSignedDistance,
   ridged2,
@@ -50,25 +49,43 @@ export interface TerrainSample {
 
 /** How far below the road surface the flattened terrain bed is kept. */
 const ROAD_BED_DEPTH = 0.38;
+/** City basin stays level out to the grid edge, then fades into the hills. */
+const CITY_BASIN_HOLD = 1.0;
+const CITY_BASIN_FADE = 1.55;
 
 const MAINLAND_BOUNDS = { minX: -1800, maxX: 1900, minZ: -3250, maxZ: 1650 };
 const SICILY_BOUNDS = { minX: -700, maxX: 650, minZ: 2000, maxZ: 3000 };
 
 export class Terrain {
   private roadProvider: RoadHeightProvider | null = null;
-  private cityBase = new Map<string, number>();
+  private cityLevel = new Map<string, number>();
   private initialized = false;
 
   constructor() {
     this.initCities();
   }
 
+  /**
+   * Each city sits on a level basin so its grid, sidewalks and building pads
+   * share one elevation. The level is the average ground over the grid area.
+   */
   private initCities(): void {
     for (const city of CITIES) {
-      const raw = this.rawHeight(city.x, city.z);
-      const base = clamp(raw, 2.2, 55);
-      city.baseHeight = base;
-      this.cityBase.set(city.id, base);
+      let sum = 0;
+      let count = 0;
+      const r = city.radius * 0.9;
+      for (let j = -2; j <= 2; j++) {
+        for (let i = -2; i <= 2; i++) {
+          const x = city.x + (i / 2) * r;
+          const z = city.z + (j / 2) * r;
+          if (this.landDistance(x, z) < 4) continue;
+          sum += Math.max(2.2, this.rawHeight(x, z));
+          count++;
+        }
+      }
+      const level = clamp(count > 0 ? sum / count : this.rawHeight(city.x, city.z), 2.2, 55);
+      city.baseHeight = level;
+      this.cityLevel.set(city.id, level);
     }
     this.initialized = true;
   }
@@ -186,15 +203,31 @@ export class Terrain {
     return { city: bestCity, weight: bestWeight };
   }
 
+  /**
+   * Basin influence (0..1) around the closest city. The flat part covers the
+   * whole street grid, which is what keeps a block pad and the streets around
+   * it at the same height instead of on a slope.
+   */
+  private basinAt(x: number, z: number): { level: number; weight: number } | null {
+    let best: { level: number; weight: number } | null = null;
+    for (const city of CITIES) {
+      const d = dist2D(x, z, city.x, city.z);
+      if (d >= city.radius * CITY_BASIN_FADE) continue;
+      const weight = 1 - smoothstep(city.radius * CITY_BASIN_HOLD, city.radius * CITY_BASIN_FADE, d);
+      if (!best || weight > best.weight) {
+        best = { level: this.cityLevel.get(city.id) ?? city.baseHeight, weight };
+      }
+    }
+    return best;
+  }
+
   /** Height including city flattening, before roads. */
   baseHeight(x: number, z: number): number {
     let h = this.rawHeight(x, z);
-    const { city, weight } = this.cityWeightAt(x, z);
-    if (city && weight > 0) {
-      const base = this.cityBase.get(city.id) ?? city.baseHeight;
+    const basin = this.basinAt(x, z);
+    if (basin) {
       const landMask = smoothstep(-14, 8, this.landDistance(x, z));
-      const target = base + noise2(x * 0.012, z * 0.012, 91) * 0.7;
-      h = lerp(h, target, weight * 0.92 * landMask);
+      h = lerp(h, basin.level, basin.weight * landMask);
     }
 
     // Lake Como basin
