@@ -81,7 +81,7 @@ export class World {
   readonly roadRails: THREE.Mesh | null;
   readonly farTerrain: THREE.Mesh;
 
-  private farNearCenter: THREE.Vector2;
+  private readonly farNearCenter = new THREE.Vector2();
   private chunks = new Map<string, ChunkRecord>();
   private sectors = new Map<string, SectorRecord>();
   private queue: BuildTask[] = [];
@@ -103,26 +103,24 @@ export class World {
     this.roadRails = null;
     // The far terrain is a coarse backdrop (35 m cells) and its interpolated
     // surface can sit above the asphalt and the 15 m streamed chunks, hiding the
-    // streets. Clip it to the area outside those chunks so it only fills the
+    // streets. Discard it inside the streamed square so it only fills the
     // horizon, while still writing depth for distant scenery.
-    this.farNearCenter = new THREE.Vector2();
     const nearCenter = this.farNearCenter;
+    const nearHalf = ((TERRAIN_RADIUS + 0.5) * CHUNK).toFixed(1);
     const farMaterial = this.materials.terrain.clone();
     farMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.uNearCenter = { value: nearCenter };
-      shader.uniforms.uNearHalf = { value: (TERRAIN_RADIUS + 0.5) * CHUNK };
-      shader.vertexShader = `varying vec3 vFarWorld;\n${shader.vertexShader}`.replace(
+      shader.vertexShader = `varying vec2 vFarXZ;\n${shader.vertexShader}`.replace(
         '#include <project_vertex>',
-        '#include <project_vertex>\n  vFarWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;',
+        '#include <project_vertex>\n  vFarXZ = (modelMatrix * vec4(transformed, 1.0)).xz;',
       );
       shader.fragmentShader =
-        `uniform vec2 uNearCenter;\nuniform float uNearHalf;\nvarying vec3 vFarWorld;\n${shader.fragmentShader}`.replace(
+        `uniform vec2 uNearCenter;\nvarying vec2 vFarXZ;\n${shader.fragmentShader}`.replace(
           '#include <clipping_planes_fragment>',
-          '#include <clipping_planes_fragment>\n  if (abs(vFarWorld.x - uNearCenter.x) < uNearHalf && abs(vFarWorld.z - uNearCenter.y) < uNearHalf) discard;',
+          `#include <clipping_planes_fragment>\n  if (max(abs(vFarXZ.x - uNearCenter.x), abs(vFarXZ.y - uNearCenter.y)) < ${nearHalf}) discard;`,
         );
     };
     this.farTerrain = new THREE.Mesh(new THREE.BufferGeometry(), farMaterial);
-    this.farTerrain.renderOrder = -5;
     this.sea = buildSea(this.materials);
     this.lake = buildLake(this.materials, LAKE.x, LAKE.z, LAKE.radius * 0.92, LAKE.waterLevel);
   }
@@ -193,6 +191,7 @@ export class World {
   private streamImmediate(px: number, pz: number): void {
     const cx = Math.floor(px / CHUNK);
     const cz = Math.floor(pz / CHUNK);
+    this.farNearCenter.set((cx + 0.5) * CHUNK, (cz + 0.5) * CHUNK);
     for (let oz = -TERRAIN_RADIUS; oz <= TERRAIN_RADIUS; oz++) {
       for (let ox = -TERRAIN_RADIUS; ox <= TERRAIN_RADIUS; ox++) {
         this.ensureChunk(cx + ox, cz + oz, false);

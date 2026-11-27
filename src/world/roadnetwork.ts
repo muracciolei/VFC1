@@ -646,7 +646,7 @@ export class RoadNetwork {
       }
     }
     if (!best) return null;
-    return { height: best.height, weight: clamp01(best.weight), width: best.width, dist: best.dist };
+    return { height: best.height, weight: best.weight, width: best.width, dist: best.dist };
   }
 
   private segMinX(seg: RoadSegment): number {
