@@ -52,13 +52,15 @@ const ROAD_BED_DEPTH = 0.38;
 /** City basin stays level out to the grid edge, then fades into the hills. */
 const CITY_BASIN_HOLD = 1.0;
 const CITY_BASIN_FADE = 1.55;
+/** The lake bed is carved out to its shore; past this radius the bank is dry. */
+const LAKE_SHORE_HOLD = 0.9;
+const LAKE_SHORE_FADE = 1.05;
 
 const MAINLAND_BOUNDS = { minX: -1800, maxX: 1900, minZ: -3250, maxZ: 1650 };
 const SICILY_BOUNDS = { minX: -700, maxX: 650, minZ: 2000, maxZ: 3000 };
 
 export class Terrain {
   private roadProvider: RoadHeightProvider | null = null;
-  private cityLevel = new Map<string, number>();
   private initialized = false;
 
   constructor() {
@@ -83,9 +85,7 @@ export class Terrain {
           count++;
         }
       }
-      const level = clamp(count > 0 ? sum / count : this.rawHeight(city.x, city.z), 2.2, 55);
-      city.baseHeight = level;
-      this.cityLevel.set(city.id, level);
+      city.baseHeight = clamp(count > 0 ? sum / count : this.rawHeight(city.x, city.z), 2.2, 55);
     }
     this.initialized = true;
   }
@@ -204,38 +204,36 @@ export class Terrain {
   }
 
   /**
-   * Basin influence (0..1) around the closest city. The flat part covers the
-   * whole street grid, which is what keeps a block pad and the streets around
-   * it at the same height instead of on a slope.
+   * Height including city flattening, before roads. Each city has a level basin
+   * that covers its whole street grid and fades into the hills, so a block pad
+   * and the streets around it share one elevation instead of sitting on a slope.
    */
-  private basinAt(x: number, z: number): { level: number; weight: number } | null {
-    let best: { level: number; weight: number } | null = null;
+  baseHeight(x: number, z: number): number {
+    let h = this.rawHeight(x, z);
+    let level = 0;
+    let weight = 0;
     for (const city of CITIES) {
       const d = dist2D(x, z, city.x, city.z);
       if (d >= city.radius * CITY_BASIN_FADE) continue;
-      const weight = 1 - smoothstep(city.radius * CITY_BASIN_HOLD, city.radius * CITY_BASIN_FADE, d);
-      if (!best || weight > best.weight) {
-        best = { level: this.cityLevel.get(city.id) ?? city.baseHeight, weight };
+      const w = 1 - smoothstep(city.radius * CITY_BASIN_HOLD, city.radius * CITY_BASIN_FADE, d);
+      if (w > weight) {
+        weight = w;
+        level = city.baseHeight;
       }
     }
-    return best;
-  }
-
-  /** Height including city flattening, before roads. */
-  baseHeight(x: number, z: number): number {
-    let h = this.rawHeight(x, z);
-    const basin = this.basinAt(x, z);
-    if (basin) {
-      const landMask = smoothstep(-14, 8, this.landDistance(x, z));
-      h = lerp(h, basin.level, basin.weight * landMask);
+    if (weight > 0) {
+      const land = smoothstep(-14, 8, this.landDistance(x, z));
+      h = lerp(h, level, weight * land);
     }
 
-    // Lake Como basin
+    // Lake Como bed. It stops at the shore, so a city basin running along the
+    // lake keeps its level bank instead of being pulled down into the water.
     const lakeD = dist2D(x, z, LAKE.x, LAKE.z);
     if (lakeD < LAKE.radius * 1.5) {
       const shore = 1 - smoothstep(LAKE.radius * 0.72, LAKE.radius * 1.22, lakeD);
+      const dry = smoothstep(LAKE.radius * LAKE_SHORE_HOLD, LAKE.radius * LAKE_SHORE_FADE, lakeD);
       const bed = LAKE.waterLevel - 9 - (1 - clamp01(lakeD / LAKE.radius)) * 6;
-      h = lerp(h, Math.min(h, bed), shore * 0.96);
+      h = lerp(h, Math.min(h, bed), shore * 0.96 * (1 - dry * weight));
     }
     return h;
   }
